@@ -18,44 +18,10 @@
         android:layout_alignParentStart="true"
         android:weightSum="1">
 
-        <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/addProduct"
-                android:background="@drawable/ic_menu_add"/>
-
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/ProdImg" />
-
-        <LinearLayout
-            android:orientation="horizontal"
+        <ListView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center">
-
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/ProdBack"
-                android:background="@drawable/back"
-                android:layout_marginRight="50dp"
-                />
-
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/ProdNext"
-                android:background="@drawable/next" />
-
-        </LinearLayout>
-
+            android:id="@+id/ProductsLv"
+            android:choiceMode="multipleChoice" />
     </LinearLayout>
 </RelativeLayout>

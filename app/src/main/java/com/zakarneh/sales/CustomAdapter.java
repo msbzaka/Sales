@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class CustomAdapter<E> extends ArrayAdapter<E> {
     private final Context context;
-    private final List<E> values;
+    private List<E> values;
 
     CustomAdapter(Context context, List<E> values){
         super(context,0,values);
