@@ -16,14 +16,17 @@ import android.provider.MediaStore;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.test.PerformanceTestCase;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -43,6 +46,7 @@ import java.util.Date;
 import java.util.List;
 
 public class ProductsScreen extends AppCompatActivity {
+    private boolean isTaken=false,mEditProd=false;
     private ImageButton addProduct;
     private ImageView ProdImg;
     private String mCurrentPhotoPath;
@@ -61,7 +65,7 @@ public class ProductsScreen extends AppCompatActivity {
             ,SEARCH_OPENED="Search Opened",SEARCH_QUERY="Search Query";
     private File storageDir;
     ProductAdapter adapter;
-    int nImg=0;
+    private int mCurrentProductPosition;
     private ListView ProductsLv;
     static final int REQUEST_IMAGE_CAPTURE = 1;
     static final int REQUEST_TAKE_PHOTO = 1;
@@ -70,7 +74,7 @@ public class ProductsScreen extends AppCompatActivity {
         super.onCreate(savedState);
         setContentView(R.layout.products_screen);
 
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
 
         actionBar=getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
@@ -96,13 +100,34 @@ public class ProductsScreen extends AppCompatActivity {
         adapter=new ProductAdapter(this,mProds);
         ProductsLv.setAdapter(adapter);
 
+        /*ProductsLv.setOnCreateContextMenuListener(new View.OnCreateContextMenuListener() {
+            @Override
+            public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+                menu.add(Menu.NONE, 0, 0, "Edit");
+                menu.add(Menu.NONE, 1, 1, "Delete");
+            }
+        });
+        ProductsLv.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+
+                Log.v("Item",position+"");
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });*/
+
         mSearchOpened = false;
 
         mIconOpenSearch = getResources()
                 .getDrawable(R.drawable.ic_search_white_24dp);
         mIconCloseSearch = getResources()
                 .getDrawable(R.drawable.ic_close_white_24dp);
-        
+        registerForContextMenu(ProductsLv);
        /* ProdBack=(Button)findViewById(R.id.ProdBack);
         ProdBack.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -178,18 +203,21 @@ public class ProductsScreen extends AppCompatActivity {
             if (photoFile != null) {
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
                         Uri.fromFile(photoFile));
+                isTaken=true;
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+                Toast.makeText(ProductsScreen.this, "PROOOOOOOOOOOOB", Toast.LENGTH_LONG).show();
             }
         }
     }
+
     private File createImageFile() throws IOException {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
-        File image = File.createTempFile(imageFileName,".jpg",storageDir);
+        File image = File.createTempFile(imageFileName,".jpg",getExternalCacheDir());
         //Save Photo Path
         mCurrentPhotoPath = image.getAbsolutePath().substring(image.getAbsolutePath().lastIndexOf("/")+1);
-        //Toast.makeText(this,mCurrentPhotoPath,Toast.LENGTH_LONG).show();
+        Toast.makeText(this,storageDir+"/"+mCurrentPhotoPath,Toast.LENGTH_LONG).show();
         return image;
     }
 
@@ -221,9 +249,6 @@ public class ProductsScreen extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 product p=new product(name.getText().toString(),""
                         ,Double.parseDouble(price.getText().toString()),Integer.parseInt(no.getText().toString()));
-                db.addProduct(p);
-                adapter.add(p);
-                adapter.notifyDataSetChanged();
                 mCurrentProduct=p;
                 TakePictureIntent();
 
@@ -236,34 +261,105 @@ public class ProductsScreen extends AppCompatActivity {
             }
         });
 
-        builder.show();    }
+        builder.show();
+    }
+    private void delete(final product p, final int position){
+        AlertDialog.Builder builder = new AlertDialog.Builder(ProductsScreen.this);
+        builder.setTitle("Are you sure?");
+
+// Set up the buttons
+        builder.setPositiveButton("YES", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                db.deleteProduct(p);
+                mProds=db.getAllProducts();
+                mProdsFiltered.remove(position);
+                adapter = new ProductAdapter(ProductsScreen.this,mProdsFiltered);
+                ProductsLv.setAdapter(adapter);
+            }
+        });
+        builder.setNegativeButton("NO", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
      @Override
      protected void onActivityResult(int requestCode, int resultCode, Intent data) {
          if(requestCode==REQUEST_TAKE_PHOTO){
-             Bitmap photo = BitmapFactory.decodeFile(storageDir+"/"+mCurrentPhotoPath,null);
-             photo = Bitmap.createScaledBitmap(photo, 100, 100, false);
-             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-             photo.compress(Bitmap.CompressFormat.JPEG, 40, bytes);
 
-             File f = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                     + File.separator + mCurrentPhotoPath);
+             mCurrentProduct.setPhoto(mCurrentPhotoPath);
+             if(mEditProd){
+                 db.updateProduct(mCurrentProduct);
+                 mProds.set(mCurrentProductPosition, mCurrentProduct);
+                 mEditProd=false;
+             }
+             else{
+                 db.addProduct(mCurrentProduct);
+                 mProds.add(mCurrentProduct);
+             }
+             adapter = new ProductAdapter(ProductsScreen.this,mProdsFiltered);
+             ProductsLv.setAdapter(adapter);
+
+             File file = new File(getExternalCacheDir()+File.separator + mCurrentPhotoPath);
+             Bitmap bmp = decodeSampledBitmapFromFile(file.getAbsolutePath(), 1000, 1000);
+             File fileBmp=new File(storageDir+"/"+mCurrentPhotoPath);
+             FileOutputStream out = null;
              try {
-                 f.createNewFile();
-                 FileOutputStream fo = new FileOutputStream(f);
-                 fo.write(bytes.toByteArray());
-                 fo.close();
-                 mCurrentProduct.setPhoto(mCurrentPhotoPath);
-                 adapter.notifyDataSetChanged();
-                 Toast.makeText(ProductsScreen.this,"Product added successfully!",Toast.LENGTH_LONG).show();
-             } catch (IOException e) {
+                 out = new FileOutputStream(fileBmp);
+                 bmp.compress(Bitmap.CompressFormat.PNG, 100, out); // bmp is your Bitmap instance
+                 // PNG is a lossless format, the compression factor (100) is ignored
+             } catch (Exception e) {
                  e.printStackTrace();
+             } finally {
+                 try {
+                     if (out != null) {
+                         out.close();
+                     }
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
              }
-             finally {
 
-             }
 
          }
      }
+    public static Bitmap decodeSampledBitmapFromFile(String path, int reqWidth, int reqHeight)
+    { // BEST QUALITY MATCH
+
+        //First decode with inJustDecodeBounds=true to check dimensions
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(path, options);
+
+        // Calculate inSampleSize, Raw height and width of image
+        final int height = options.outHeight;
+        final int width = options.outWidth;
+        options.inPreferredConfig = Bitmap.Config.RGB_565;
+        int inSampleSize = 1;
+
+        if (height > reqHeight)
+        {
+            inSampleSize = Math.round((float)height / (float)reqHeight);
+        }
+        int expectedWidth = width / inSampleSize;
+
+        if (expectedWidth > reqWidth)
+        {
+            //if(Math.round((float)width / (float)reqWidth) > inSampleSize) // If bigger SampSize..
+            inSampleSize = Math.round((float)width / (float)reqWidth);
+        }
+
+        options.inSampleSize = inSampleSize;
+
+        // Decode bitmap with inSampleSize set
+        options.inJustDecodeBounds = false;
+
+        return BitmapFactory.decodeFile(path, options);
+    }
     private void openSearchBar(String queryText) {
 
         // Set custom view on action bar.
@@ -306,6 +402,8 @@ public class ProductsScreen extends AppCompatActivity {
         actionBar.setDisplayShowCustomEnabled(false);
 
         // Change search icon accordingly.
+        adapter = new ProductAdapter(ProductsScreen.this, mProds);
+        ProductsLv.setAdapter(adapter);
         mSearchAction.setIcon(mIconOpenSearch);
         mSearchOpened = false;
     }
@@ -315,7 +413,7 @@ public class ProductsScreen extends AppCompatActivity {
         // to search word by word (in lower case).
         String[] queryByWords = query.toLowerCase().split("\\s+");
 
-        // Empty list to fill with matches.
+        // Empty lists to fill with matches.
         List<product> ClientsFiltered = new ArrayList<product>();
 
         // Go through initial releases and perform search.
@@ -349,5 +447,71 @@ public class ProductsScreen extends AppCompatActivity {
         }
 
         return ClientsFiltered;
+    }
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        menu.add(Menu.NONE, 0, 0, "Edit");
+        menu.add(Menu.NONE, 1, Menu.NONE, "Delete");
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        int id =item.getItemId();
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        product p=adapter.getItem(info.position);
+        if(id==1) {//DELETE
+            delete(p,info.position);
+            return true;
+        }
+        else if(id==0){//Edit
+            mCurrentProductPosition=info.position;
+            edit(p);
+            return true;
+        }
+        return false;
+    }
+    private void edit(final product p){
+        AlertDialog.Builder builder = new AlertDialog.Builder(ProductsScreen.this);
+        builder.setTitle("Edit Product");
+        LinearLayout layout = new LinearLayout(ProductsScreen.this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        final EditText name = new EditText(ProductsScreen.this);
+        name.setHint("New Product Name");
+        layout.addView(name);
+
+        final EditText price = new EditText(ProductsScreen.this);
+        price.setInputType(InputType.TYPE_CLASS_NUMBER);
+        price.setHint("New Price");
+        layout.addView(price);
+
+        final EditText no = new EditText(ProductsScreen.this);
+        no.setHint("New Quantity");
+        no.setInputType(InputType.TYPE_CLASS_NUMBER);
+        layout.addView(no);
+
+        builder.setView(layout);
+
+// Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                product newP=p;
+                newP.setName(name.getText().toString());
+                newP.setPrice(Double.parseDouble(price.getText().toString()));
+                newP.setAvailable(Integer.parseInt(no.getText().toString()));
+                mCurrentProduct=newP;
+                mEditProd=true;
+                TakePictureIntent();
+            }
+        });
+        builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
     }
 }

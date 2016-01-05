@@ -13,10 +13,12 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -31,7 +33,7 @@ public class ClientsScreen extends AppCompatActivity {
     private ListView ClientsLv;
     private ImageButton addClient;
     private RunDatabaseHelper db;
-    private CustomAdapter adapter;
+    private ClientAdapter adapter;
     private Drawable mIconCloseSearch, mIconOpenSearch;
     private boolean mSearchOpened;
     private MenuItem mSearchAction,mAddAction;
@@ -69,11 +71,13 @@ public class ClientsScreen extends AppCompatActivity {
             mSearchOpened = savedState.getBoolean(SEARCH_OPENED);
             mSearchQuery = savedState.getString(SEARCH_QUERY);*/
         }
-        adapter=new CustomAdapter(this,mClientsFiltered);
+        adapter=new ClientAdapter(this,mClientsFiltered);
         ClientsLv=(ListView)findViewById(R.id.ClientsLv);
         ClientsLv.setAdapter(adapter);
         mSearchOpened = false;
 
+        registerForContextMenu(ClientsLv);
+        
         mIconOpenSearch = getResources()
                 .getDrawable(R.drawable.ic_search_white_24dp);
         mIconCloseSearch = getResources()
@@ -149,7 +153,7 @@ public class ClientsScreen extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
                 mSearchQuery = mSearchEt.getText().toString();
                 mClientsFiltered=performSearch(mClients,mSearchQuery);
-                adapter=new CustomAdapter(ClientsScreen.this,mClientsFiltered);
+                adapter=new ClientAdapter(ClientsScreen.this,mClientsFiltered);
                 ClientsLv.setAdapter(adapter);
             }
         });
@@ -253,5 +257,94 @@ public class ClientsScreen extends AppCompatActivity {
         }
 
         return ClientsFiltered;
+    }
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        menu.add(Menu.NONE, 0, 0, "Edit");
+        menu.add(Menu.NONE, 1, Menu.NONE, "Delete");
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        int id =item.getItemId();
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        client c=adapter.getItem(info.position);
+        if(id==1) {//DELETE
+            delete(c, info.position);
+            return true;
+        }
+        else if(id==0){//Edit
+            edit(c,info.position);
+            return true;
+        }
+        return false;
+    }
+    private void edit(final client c, final int position){
+        AlertDialog.Builder builder = new AlertDialog.Builder(ClientsScreen.this);
+        builder.setTitle("Edit Client");
+        LinearLayout layout = new LinearLayout(ClientsScreen.this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        final EditText name = new EditText(ClientsScreen.this);
+        name.setHint("New Client Name");
+        layout.addView(name);
+
+        final EditText city = new EditText(ClientsScreen.this);
+        city.setHint("New City");
+        layout.addView(city);
+
+        final EditText no = new EditText(ClientsScreen.this);
+        no.setHint("New Phone Number");
+        no.setInputType(InputType.TYPE_CLASS_NUMBER);
+        layout.addView(no);
+
+        builder.setView(layout);
+
+// Set up the buttons
+        builder.setPositiveButton("YES", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                client newC=c;
+                newC.setName(name.getText().toString());
+                newC.setCity(city.getText().toString());
+                newC.setPhone(no.getText().toString());
+                db.updateClient(newC);
+                mClients.set(position,newC);
+                adapter = new ClientAdapter(ClientsScreen.this,mClientsFiltered);
+                ClientsLv.setAdapter(adapter);
+            }
+        });
+        builder.setNegativeButton("NO", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+    private void delete(final client c, final int position){
+        AlertDialog.Builder builder = new AlertDialog.Builder(ClientsScreen.this);
+        builder.setTitle("Are you sure?");
+
+// Set up the buttons
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                db.deleteClient(c);
+                mClients=db.getAllClients();
+                mClientsFiltered.remove(position);
+                adapter = new ClientAdapter(ClientsScreen.this,mClientsFiltered);
+                ClientsLv.setAdapter(adapter);
+            }
+        });
+        builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
     }
 }

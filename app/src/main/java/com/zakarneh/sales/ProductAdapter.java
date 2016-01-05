@@ -43,8 +43,10 @@ public class ProductAdapter extends ArrayAdapter<product> {
             price.setText(p.getPrice() + " $");
             av.setText("Quantity : "+p.getAvailable());
             try {
-                Bitmap m = BitmapFactory.decodeFile(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                        + File.separator + values.get(position).toString());
+                Bitmap m = BitmapFactory.decodeFile(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                        +"/"+p.getPhoto().toString());
+                /*context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                        + File.separator + values.get(position).toString()*/
                 if(m!=null)
                 img.setImageBitmap(m);
             }
