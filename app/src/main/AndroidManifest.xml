@@ -40,7 +40,8 @@
         <activity
             android:name=".SalesHistoryScreen"
             android:label="Sales History"></activity>
-        <activity android:name=".SellProductsScreen"></activity>
+        <activity android:name=".SellProductsScreen"
+                  android:windowSoftInputMode="adjustPan"></activity>
     </application>
 
 </manifest>

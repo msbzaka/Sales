@@ -194,12 +194,12 @@ public class SellProductsScreen extends AppCompatActivity {
         for(int i=0;i<mProds.size();i++){
 
             View v=adapter.getView(i, null, ProductsLv);
-            Toast.makeText(this,((TextView)v.findViewById(R.id.SellProdNameView)).getText()+"",Toast.LENGTH_LONG).show();
-            boolean checked=((CheckBox)v.findViewById(R.id.CheckProd)).isChecked();
-            Toast.makeText(this,checked+"",Toast.LENGTH_LONG).show();
-
+            //Toast.makeText(this,((TextView)v.findViewById(R.id.SellProdNameView)).getText()+"",Toast.LENGTH_LONG).show();
+            boolean checked=adapter.getCheckB(i);
+            Toast.makeText(this,checked+"",Toast.LENGTH_SHORT).show();
             if(checked){
-                int quantity=Integer.parseInt(((EditText) v.findViewById(R.id.QuantityText)).getText().toString());
+                int quantity=5;//Integer.parseInt(adapter.getQuantity(i));
+                Toast.makeText(this,adapter.getQuantity(i)+"",Toast.LENGTH_SHORT).show();
                 double price=adapter.getItem(i).getPrice();
                 int prod_id=adapter.getItem(i).getProduct_id();
                 Calendar c = Calendar.getInstance();

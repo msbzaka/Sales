@@ -48,7 +48,7 @@ public class ClientsScreen extends AppCompatActivity {
     protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
         setContentView(R.layout.clients_screen);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
 
         actionBar=getSupportActionBar();
         actionBar.setDisplayHomeAsUpEnabled(true);
