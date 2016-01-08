@@ -1,5 +1,7 @@
 package com.zakarneh.sales;
 
+import java.io.Serializable;
+
 /**
  * Created by anas on 12/31/2015.
  */

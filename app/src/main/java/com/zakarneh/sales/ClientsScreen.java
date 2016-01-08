@@ -74,6 +74,16 @@ public class ClientsScreen extends AppCompatActivity {
         adapter=new ClientAdapter(this,mClientsFiltered);
         ClientsLv=(ListView)findViewById(R.id.ClientsLv);
         ClientsLv.setAdapter(adapter);
+
+        ClientsLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent i = new Intent(ClientsScreen.this,SellProductsScreen.class);
+                i.putExtra("ClientID",mClients.get(position).getClient_id());
+                startActivity(i);
+            }
+        });
+
         mSearchOpened = false;
 
         registerForContextMenu(ClientsLv);
