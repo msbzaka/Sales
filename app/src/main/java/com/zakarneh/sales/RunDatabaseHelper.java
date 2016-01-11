@@ -2,7 +2,7 @@ package com.zakarneh.sales;
 
 /**
  * Created by anas on 1/2/2016.
-*/
+ */
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -10,7 +10,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -97,14 +98,14 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
         // 4. build book object
         product pro = new product(Integer.parseInt((cursor.getString(0))),cursor.getString(1),cursor.getString(2),Double.parseDouble(cursor.getString(3)),Integer.parseInt(cursor.getString(4)));
         //log
-        Log.d("getBook("+id+")", pro.toString());
+        Log.d("getBook(" + id + ")", pro.toString());
 
         // 5. return book
         return pro;
 
     }
     public List<product> getAllProducts() {
-        List<product> products = new LinkedList<product>();
+        List<product> products = new ArrayList<product>();
 
         // 1. build the query
         String query = "SELECT  * FROM " + "products";
@@ -220,14 +221,14 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
         // 4. build book object
         sale sa = new sale(Integer.parseInt((cursor.getString(0))),Integer.parseInt((cursor.getString(1))),Integer.parseInt((cursor.getString(2))),Integer.parseInt((cursor.getString(3))),Double.parseDouble(cursor.getString(4)), cursor.getString(5));
         //log
-        Log.d("getSale("+id+")", sa.toString());
+        Log.d("getSale(" + id + ")", sa.toString());
 
         // 5. return book
         return sa;
 
     }
     public List<sale> getAllSales() {
-        List<sale> sales = new LinkedList<sale>();
+        List<sale> sales = new ArrayList<sale>();
 
         // 1. build the query
         String query = "SELECT  * FROM " + "sales";
@@ -290,8 +291,8 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
 
         // 2. delete
         db.delete("sales",
-                "sale_id"+" = ?",
-                new String[] { String.valueOf(sa.getSale_id()) });
+                "sale_id" + " = ?",
+                new String[]{String.valueOf(sa.getSale_id())});
 
         // 3. close
         db.close();
@@ -342,7 +343,13 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
             cursor.moveToFirst();
 
         // 4. build book object
-        client cli = new client(Integer.parseInt((cursor.getString(0))),cursor.getString(1),cursor.getString(2),cursor.getString(3));
+        client cli=null;
+        try {
+            cli = new client(cursor.getInt(0), cursor.getString(1), cursor.getString(2), cursor.getString(3));
+        }
+        catch (Exception e){
+            return  null;
+        }
         //log
         Log.d("getClient("+id+")", cli.toString());
 
@@ -351,7 +358,7 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
 
     }
     public List<client> getAllClients() {
-        List<client> clients = new LinkedList<client>();
+        List<client> clients = new ArrayList<client>();
 
         // 1. build the query
         String query = "SELECT  * FROM " + "clients";
@@ -470,7 +477,7 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
 
     }
     public List<note> getAllNotes() {
-        List<note> Notes = new LinkedList<note>();
+        List<note> Notes = new ArrayList<note>();
 
         // 1. build the query
         String query = "SELECT  * FROM " + "notes";
@@ -536,6 +543,37 @@ public class RunDatabaseHelper extends SQLiteOpenHelper {
         Log.d("deleteClient", no.toString());
 
     }
+    public List<sale> getAllSales(String startdate, String enddate) {
+        List<sale> sales = new ArrayList<sale>();
 
+        // 1. build the query
+        String query = "SELECT * FROM sales WHERE sale_date BETWEEN ?  AND ?";
+
+        // 2. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(query, new String[]{startdate, enddate});
+
+        // 3. go over each row, build book and add it to list
+        sale sa = null;
+        if (cursor.moveToFirst()) {
+            do {
+                sa = new sale();
+                sa.setSale_id(Integer.parseInt(cursor.getString(0)));
+                sa.setClient_id(Integer.parseInt(cursor.getString(1)));
+                sa.setProduct_id(Integer.parseInt(cursor.getString(2)));
+                sa.setQuantity(Integer.parseInt(cursor.getString(3)));
+                sa.setPrice(Double.parseDouble(cursor.getString(4)));
+                sa.setDate(cursor.getString(5));
+                // Add sale to sales
+
+                sales.add(sa);
+            } while (cursor.moveToNext());
+        }
+
+        Log.d("getAllSales(date,date)", sales.toString());
+
+        // return books
+        return sales;
+    }
 
 }

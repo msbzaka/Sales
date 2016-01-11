@@ -1,7 +1,11 @@
 package com.zakarneh.sales;
 
+import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -11,15 +15,18 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.test.PerformanceTestCase;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -28,6 +35,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -43,6 +51,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.FormatFlagsConversionMismatchException;
 import java.util.List;
 
 public class ProductsScreen extends AppCompatActivity {
@@ -52,28 +61,28 @@ public class ProductsScreen extends AppCompatActivity {
     private String mCurrentPhotoPath;
     private product mCurrentProduct;
     private RunDatabaseHelper db;
-    private Button ProdNext,ProdBack;
     private android.support.v7.app.ActionBar actionBar;
     private Drawable mIconCloseSearch, mIconOpenSearch;
     private boolean mSearchOpened;
-    private MenuItem mSearchAction,mAddAction;
+    private MenuItem mSearchAction;
     private EditText mSearchEt;
     private String mSearchQuery;
     private List<product> mProds;
     private List<product> mProdsFiltered;
-    private static String Prods="Initial Prods",Prods_FILTERED="Filtered Prods"
-            ,SEARCH_OPENED="Search Opened",SEARCH_QUERY="Search Query";
+    private static String CURRENT_PROD="mCurrentProduct",CURRENT_PHOTO="mCurrentPhotoPath"
+            ,IS_TAKEN="isTaken",EDIT_PROD="mEditProd",CURRENT_PROD_POS="mCurrentProductPosition";
     private File storageDir;
     ProductAdapter adapter;
     private int mCurrentProductPosition;
     private ListView ProductsLv;
     static final int REQUEST_IMAGE_CAPTURE = 1;
     static final int REQUEST_TAKE_PHOTO = 1;
+    private static String ADAPTER="Adapter of ListView",SEARCH_OPENED="Search Opened",SEARCH_QUERY="Search Query";
+
     @Override
     protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
         setContentView(R.layout.products_screen);
-
         //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
 
         actionBar=getSupportActionBar();
@@ -82,90 +91,69 @@ public class ProductsScreen extends AppCompatActivity {
 
         storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         db=new RunDatabaseHelper(this);
+        mProds = db.getAllProducts();
 
         if (savedState == null) {
-            mProds = db.getAllProducts();
             mProdsFiltered = mProds;
             mSearchOpened = false;
             mSearchQuery = "";
+
         } else {
+            //adapter=(ProductAdapter)savedState.getParcelable(ADAPTER);
+
+            mSearchOpened = savedState.getBoolean(SEARCH_OPENED);
+            mSearchQuery = savedState.getString(SEARCH_QUERY);
+            mProdsFiltered =performSearch(mProds, mSearchQuery);
+            mCurrentProduct=(product)savedState.getSerializable(CURRENT_PROD);
+            mCurrentPhotoPath=savedState.getString(CURRENT_PHOTO);
+            mCurrentProductPosition=savedState.getInt(CURRENT_PROD_POS);
+            isTaken=savedState.getBoolean(IS_TAKEN);
+            mEditProd=savedState.getBoolean(EDIT_PROD);
+
             /*mProds = savedState.getParcelableArrayList(CLIENTS);
             mProdsFiltered = savedState
                     .getParcelableArrayList(CLIENTS_FILTERED);
-            mSearchOpened = savedState.getBoolean(SEARCH_OPENED);
-            mSearchQuery = savedState.getString(SEARCH_QUERY);*/
+*/
         }
-        
+
+        adapter=new ProductAdapter(this,mProdsFiltered);
         ProductsLv=(ListView)findViewById(R.id.ProductsLv);
-        adapter=new ProductAdapter(this,mProds);
         ProductsLv.setAdapter(adapter);
 
-        /*ProductsLv.setOnCreateContextMenuListener(new View.OnCreateContextMenuListener() {
-            @Override
-            public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-                menu.add(Menu.NONE, 0, 0, "Edit");
-                menu.add(Menu.NONE, 1, 1, "Delete");
-            }
-        });
-        ProductsLv.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 
+        //mSearchOpened = false;
 
-                Log.v("Item",position+"");
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });*/
-
-        mSearchOpened = false;
-
-        mIconOpenSearch = getResources()
-                .getDrawable(R.drawable.ic_search_white_24dp);
-        mIconCloseSearch = getResources()
-                .getDrawable(R.drawable.ic_close_white_24dp);
+        mIconOpenSearch = getResources().getDrawable(R.drawable.ic_search_white_24dp);
+        mIconCloseSearch = getResources().getDrawable(R.drawable.ic_close_white_24dp);
         registerForContextMenu(ProductsLv);
-       /* ProdBack=(Button)findViewById(R.id.ProdBack);
-        ProdBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                nImg++;
-                if (nImg == mProds.size())
-                    nImg = 0;
-                Bitmap m = BitmapFactory.decodeFile(storageDir + mProds.get(nImg).getPhoto());
-                ProdImg.setImageBitmap(m);
 
-            }
-        });
-
-
-        ProdNext=(Button)findViewById(R.id.ProdNext);
-        ProdNext.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                nImg--;
-                if(nImg<0)
-                    nImg=mProds.size()-1;
-                Bitmap m =BitmapFactory.decodeFile(storageDir+mProds.get(nImg).getPhoto());
-                ProdImg.setImageBitmap(m);
-
-            }
-        });*/
 
         db.close();
             }
     @Override
+    public void onSaveInstanceState(Bundle out){
+        super.onSaveInstanceState(out);
+        out.putParcelable(ADAPTER, adapter);
+        out.putBoolean(SEARCH_OPENED, mSearchOpened);
+        out.putString(SEARCH_QUERY, mSearchQuery);
+        out.putSerializable(CURRENT_PROD, mCurrentProduct);
+        out.putString(CURRENT_PHOTO, mCurrentPhotoPath);
+        out.putBoolean(IS_TAKEN, isTaken);
+        out.putBoolean(EDIT_PROD,mEditProd);
+        out.putInt(CURRENT_PROD_POS,mCurrentProductPosition);
+    }
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater=getMenuInflater();
         inflater.inflate(R.menu.products_menu,menu);
+        mSearchAction = menu.findItem(R.id.action_search_prod);
+        if(mSearchOpened){
+            openSearchBar(mSearchQuery);
+        }
         return super.onCreateOptionsMenu(menu);
     }
     public boolean onPrepareOptionsMenu(Menu menu) {
         mSearchAction = menu.findItem(R.id.action_search_prod);
-        mAddAction=menu.findItem(R.id.action_add_prod);
         return super.onPrepareOptionsMenu(menu);
     }
     @Override
@@ -205,7 +193,7 @@ public class ProductsScreen extends AppCompatActivity {
                         Uri.fromFile(photoFile));
                 isTaken=true;
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
-                Toast.makeText(ProductsScreen.this, "PROOOOOOOOOOOOB", Toast.LENGTH_LONG).show();
+                //Toast.makeText(ProductsScreen.this, "PROOOOOOOOOOOOB", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -217,7 +205,7 @@ public class ProductsScreen extends AppCompatActivity {
         File image = File.createTempFile(imageFileName,".jpg",getExternalCacheDir());
         //Save Photo Path
         mCurrentPhotoPath = image.getAbsolutePath().substring(image.getAbsolutePath().lastIndexOf("/")+1);
-        Toast.makeText(this,storageDir+"/"+mCurrentPhotoPath,Toast.LENGTH_LONG).show();
+        //Toast.makeText(this,storageDir+"/"+mCurrentPhotoPath,Toast.LENGTH_LONG).show();
         return image;
     }
 
@@ -247,10 +235,17 @@ public class ProductsScreen extends AppCompatActivity {
         builder.setPositiveButton("ADD", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                product p=new product(name.getText().toString(),""
-                        ,Double.parseDouble(price.getText().toString()),Integer.parseInt(no.getText().toString()));
-                mCurrentProduct=p;
-                TakePictureIntent();
+               try {
+                   product p = new product(name.getText().toString(), ""
+                           , Double.parseDouble(price.getText().toString()), Integer.parseInt(no.getText().toString()));
+
+                   mCurrentProduct = p;
+                   TakePictureIntent();
+               }
+               catch (NumberFormatException e){
+                   Toast.makeText(ProductsScreen.this,"Error Data!",Toast.LENGTH_SHORT).show();
+                   Log.v("Products Screen",e.getMessage());
+               }
 
             }
         });
@@ -276,6 +271,7 @@ public class ProductsScreen extends AppCompatActivity {
                 mProdsFiltered.remove(position);
                 adapter = new ProductAdapter(ProductsScreen.this,mProdsFiltered);
                 ProductsLv.setAdapter(adapter);
+                Toast.makeText(ProductsScreen.this, "The product is deleted successfully!", Toast.LENGTH_SHORT).show();
             }
         });
         builder.setNegativeButton("NO", new DialogInterface.OnClickListener() {
@@ -296,16 +292,19 @@ public class ProductsScreen extends AppCompatActivity {
                  db.updateProduct(mCurrentProduct);
                  mProds.set(mCurrentProductPosition, mCurrentProduct);
                  mEditProd=false;
+                 Toast.makeText(ProductsScreen.this, "The product is edited successfully!", Toast.LENGTH_SHORT).show();
              }
              else{
                  db.addProduct(mCurrentProduct);
-                 mProds.add(mCurrentProduct);
+                 mProds.add(mProds.size(),mCurrentProduct);
+                 Toast.makeText(ProductsScreen.this, "The product is added successfully!", Toast.LENGTH_SHORT).show();
              }
+             mProdsFiltered=performSearch(mProds,mSearchQuery);
              adapter = new ProductAdapter(ProductsScreen.this,mProdsFiltered);
              ProductsLv.setAdapter(adapter);
 
              File file = new File(getExternalCacheDir()+File.separator + mCurrentPhotoPath);
-             Bitmap bmp = decodeSampledBitmapFromFile(file.getAbsolutePath(), 1000, 1000);
+             Bitmap bmp = decodeSampledBitmapFromFile(file.getAbsolutePath(), 200, 200);
              File fileBmp=new File(storageDir+"/"+mCurrentPhotoPath);
              FileOutputStream out = null;
              try {
@@ -364,7 +363,7 @@ public class ProductsScreen extends AppCompatActivity {
 
         // Set custom view on action bar.
         actionBar.setDisplayShowCustomEnabled(true);
-        actionBar.setCustomView(R.layout.prods_action_bar);
+        actionBar.setCustomView(R.layout.action_bar);
 
         // Search edit text field setup.
         mSearchEt = (EditText) actionBar.getCustomView()
@@ -389,7 +388,7 @@ public class ProductsScreen extends AppCompatActivity {
             }
         });
         mSearchEt.setText(queryText);
-        mSearchEt.requestFocus();
+        //mSearchEt.requestFocus();
 
         // Change search icon accordingly.
         mSearchAction.setIcon(mIconCloseSearch);
@@ -476,19 +475,38 @@ public class ProductsScreen extends AppCompatActivity {
         LinearLayout layout = new LinearLayout(ProductsScreen.this);
         layout.setOrientation(LinearLayout.VERTICAL);
 
+        LinearLayout l1 = new LinearLayout(this);
+        l1.setOrientation(LinearLayout.HORIZONTAL);
         final EditText name = new EditText(ProductsScreen.this);
         name.setHint("New Product Name");
-        layout.addView(name);
+        final CheckBox nameC= new CheckBox(this);
+        l1.addView(name);
+        l1.addView(nameC);
+        layout.addView(l1);
 
+        LinearLayout l2 = new LinearLayout(ProductsScreen.this);
+        l2.setOrientation(LinearLayout.HORIZONTAL);
         final EditText price = new EditText(ProductsScreen.this);
         price.setInputType(InputType.TYPE_CLASS_NUMBER);
         price.setHint("New Price");
-        layout.addView(price);
+        final CheckBox priceC= new CheckBox(this);
+        l2.addView(price);
+        l2.addView(priceC);
+        layout.addView(l2);
 
+        LinearLayout l3 = new LinearLayout(ProductsScreen.this);
+        l3.setOrientation(LinearLayout.HORIZONTAL);
         final EditText no = new EditText(ProductsScreen.this);
         no.setHint("New Quantity");
         no.setInputType(InputType.TYPE_CLASS_NUMBER);
-        layout.addView(no);
+        final CheckBox quantityC= new CheckBox(this);
+        l3.addView(no);
+        l3.addView(quantityC);
+        layout.addView(l3);
+
+        final CheckBox photoC=new CheckBox(this);
+        photoC.setText("Set New Photo");
+        layout.addView(photoC);
 
         builder.setView(layout);
 
@@ -497,12 +515,24 @@ public class ProductsScreen extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 product newP=p;
+                if(nameC.isChecked())
                 newP.setName(name.getText().toString());
+                if(priceC.isChecked())
                 newP.setPrice(Double.parseDouble(price.getText().toString()));
+                if(quantityC.isChecked())
                 newP.setAvailable(Integer.parseInt(no.getText().toString()));
                 mCurrentProduct=newP;
-                mEditProd=true;
-                TakePictureIntent();
+                if(photoC.isChecked()) {
+                    mEditProd = true;
+                    TakePictureIntent();
+                }
+                if(!photoC.isChecked()) {
+                    db.updateProduct(mCurrentProduct);
+                    mProds.set(mCurrentProductPosition, mCurrentProduct);
+                    adapter = new ProductAdapter(ProductsScreen.this,mProdsFiltered);
+                    ProductsLv.setAdapter(adapter);
+                    Toast.makeText(ProductsScreen.this, "The product edited successfully!", Toast.LENGTH_SHORT).show();
+                }
             }
         });
         builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {
@@ -514,4 +544,11 @@ public class ProductsScreen extends AppCompatActivity {
 
         builder.show();
     }
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        ProductsLv.setAdapter(null);
+
+    }
+
 }

@@ -20,12 +20,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,17 +62,18 @@ public class ClientsScreen extends AppCompatActivity {
         mClients=db.getAllClients();
 
         if (savedState == null) {
-            mClients = db.getAllClients();
             mClientsFiltered = mClients;
             mSearchOpened = false;
             mSearchQuery = "";
+
         } else {
-            /*mClients = savedState.getParcelableArrayList(CLIENTS);
-            mClientsFiltered = savedState
-                    .getParcelableArrayList(CLIENTS_FILTERED);
+            //adapter=(ClientAdapter)savedState.getParcelable(ADAPTER);
             mSearchOpened = savedState.getBoolean(SEARCH_OPENED);
-            mSearchQuery = savedState.getString(SEARCH_QUERY);*/
+            mSearchQuery = savedState.getString(SEARCH_QUERY);
+            mClientsFiltered =performSearch(mClients, mSearchQuery);
         }
+
+
         adapter=new ClientAdapter(this,mClientsFiltered);
         ClientsLv=(ListView)findViewById(R.id.ClientsLv);
         ClientsLv.setAdapter(adapter);
@@ -79,12 +82,11 @@ public class ClientsScreen extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Intent i = new Intent(ClientsScreen.this,SellProductsScreen.class);
-                i.putExtra("ClientID",mClients.get(position).getClient_id());
+                //Toast.makeText(ClientsScreen.this,position+"",Toast.LENGTH_LONG).show();
+                        i.putExtra("ClientID", mClients.get(position).getClient_id());
                 startActivity(i);
             }
         });
-
-        mSearchOpened = false;
 
         registerForContextMenu(ClientsLv);
         
@@ -96,21 +98,21 @@ public class ClientsScreen extends AppCompatActivity {
 
 
 
-        db.close();
     }
-   /* @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putParcelableArrayList(CLIENTS, (ArrayList<client>) mClients);
-        outState.putParcelableArrayList(CLIENTS_FILTERED,
-                (ArrayList<client>) mClientsFiltered);
-        outState.putBoolean(SEARCH_OPENED, mSearchOpened);
-        outState.putString(SEARCH_QUERY, mSearchQuery);
-    }*/
+    @Override
+    public void onSaveInstanceState(Bundle out){
+        super.onSaveInstanceState(out);
+        out.putBoolean(SEARCH_OPENED, mSearchOpened);
+        out.putString(SEARCH_QUERY, mSearchQuery);
+    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater=getMenuInflater();
         inflater.inflate(R.menu.clients_menu,menu);
+        mSearchAction = menu.findItem(R.id.action_search_prod);
+        if(mSearchOpened){
+            openSearchBar(mSearchQuery);
+        }
         return super.onCreateOptionsMenu(menu);
     }
     @Override
@@ -143,7 +145,7 @@ public class ClientsScreen extends AppCompatActivity {
 
         // Set custom view on action bar.
         actionBar.setDisplayShowCustomEnabled(true);
-        actionBar.setCustomView(R.layout.clients_action_bar);
+        actionBar.setCustomView(R.layout.action_bar);
 
         // Search edit text field setup.
         mSearchEt = (EditText) actionBar.getCustomView()
@@ -168,8 +170,7 @@ public class ClientsScreen extends AppCompatActivity {
             }
         });
         mSearchEt.setText(queryText);
-        mSearchEt.requestFocus();
-
+        //mSearchEt.requestFocus();
         // Change search icon accordingly.
         mSearchAction.setIcon(mIconCloseSearch);
         mSearchOpened = true;
@@ -211,9 +212,11 @@ public class ClientsScreen extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 client c=new client(name.getText().toString(), city.getText().toString(), no.getText().toString());
                 db.addclient(c);
-                adapter.add(c);
-                adapter.notifyDataSetChanged();
-                Toast.makeText(ClientsScreen.this,"Client added successfully!",Toast.LENGTH_LONG).show();
+                mClients=db.getAllClients();
+                mClientsFiltered=performSearch(mClients, mSearchQuery);
+                adapter=new ClientAdapter(ClientsScreen.this,mClientsFiltered);
+                ClientsLv.setAdapter(adapter);
+                Toast.makeText(ClientsScreen.this,"The client is added successfully!",Toast.LENGTH_LONG).show();
 
             }
         });
@@ -295,33 +298,52 @@ public class ClientsScreen extends AppCompatActivity {
         LinearLayout layout = new LinearLayout(ClientsScreen.this);
         layout.setOrientation(LinearLayout.VERTICAL);
 
+        LinearLayout l1 = new LinearLayout(this);
+        l1.setOrientation(LinearLayout.HORIZONTAL);
         final EditText name = new EditText(ClientsScreen.this);
         name.setHint("New Client Name");
-        layout.addView(name);
+        final CheckBox nameC= new CheckBox(this);
+        l1.addView(name);
+        l1.addView(nameC);
+        layout.addView(l1);
 
+        LinearLayout l2 = new LinearLayout(this);
+        l2.setOrientation(LinearLayout.HORIZONTAL);
         final EditText city = new EditText(ClientsScreen.this);
         city.setHint("New City");
-        layout.addView(city);
+        final CheckBox cityC= new CheckBox(this);
+        l2.addView(city);
+        l2.addView(cityC);
+        layout.addView(l2);
 
+        LinearLayout l3 = new LinearLayout(this);
+        l3.setOrientation(LinearLayout.HORIZONTAL);
         final EditText no = new EditText(ClientsScreen.this);
         no.setHint("New Phone Number");
         no.setInputType(InputType.TYPE_CLASS_NUMBER);
-        layout.addView(no);
+        final CheckBox noC= new CheckBox(this);
+        l3.addView(no);
+        l3.addView(noC);
+        layout.addView(l3);
 
         builder.setView(layout);
 
 // Set up the buttons
-        builder.setPositiveButton("YES", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 client newC=c;
+                if(nameC.isChecked())
                 newC.setName(name.getText().toString());
+                if(cityC.isChecked())
                 newC.setCity(city.getText().toString());
+                if(noC.isChecked())
                 newC.setPhone(no.getText().toString());
                 db.updateClient(newC);
-                mClients.set(position,newC);
+                mClients.set(position, newC);
                 adapter = new ClientAdapter(ClientsScreen.this,mClientsFiltered);
                 ClientsLv.setAdapter(adapter);
+                Toast.makeText(ClientsScreen.this, "The client is edited successfully!", Toast.LENGTH_SHORT).show();
             }
         });
         builder.setNegativeButton("NO", new DialogInterface.OnClickListener() {
@@ -341,11 +363,19 @@ public class ClientsScreen extends AppCompatActivity {
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                int id=c.getClient_id();
                 db.deleteClient(c);
                 mClients=db.getAllClients();
                 mClientsFiltered.remove(position);
                 adapter = new ClientAdapter(ClientsScreen.this,mClientsFiltered);
                 ClientsLv.setAdapter(adapter);
+                Toast.makeText(ClientsScreen.this, "The client is deleted successfully!", Toast.LENGTH_SHORT).show();
+                //Deleting sales that did by the deleted client
+                List<sale> mSales=db.getAllSales();
+                for(int i=0;i<mSales.size();i++)
+                    if(mSales.get(i).getClient_id()==id)
+                        db.deleteSale(mSales.get(i));
+
             }
         });
         builder.setNegativeButton("CANCEL", new DialogInterface.OnClickListener() {

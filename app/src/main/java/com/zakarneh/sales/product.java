@@ -9,7 +9,7 @@ import java.io.Serializable;
  "create table products (" +
                 "product_id INTEGER primary key autoincrement,product_name TEXT,photo TEXT,price REAL,available INTEGER )"
  */
-public class product {
+public class product implements Serializable {
     private int product_id,available;
     private String product_name,photo;
     private double price;

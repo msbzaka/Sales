@@ -10,6 +10,8 @@ create table sales (" +
  */
 public class sale {
     private int sale_id,client_id,product_id,quantity;
+    String clientName;
+    String productName;
     private double price;
     private String date;
     sale(){
@@ -77,6 +79,22 @@ public class sale {
 
     public int getSale_id() {
         return sale_id;
+    }
+
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }
+
+    public String getClientName() {
+        return clientName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductName() {
+        return productName;
     }
 
     @Override

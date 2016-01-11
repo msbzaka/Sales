@@ -6,6 +6,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,12 +19,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by USER on 1/3/2016.
  */
-public class ProductAdapter extends ArrayAdapter<product> {
+public class ProductAdapter extends ArrayAdapter<product> implements Parcelable {
     private final Context context;
     private List<product> values;
     private ViewHolder holder;
@@ -110,4 +113,46 @@ public class ProductAdapter extends ArrayAdapter<product> {
         }
 
     }
+
+    protected ProductAdapter(Parcel in) {
+        super((Context)in.readValue(Context.class.getClassLoader()),0,in.readArrayList(product.class.getClassLoader()));
+        context = (Context)in.readValue(Context.class.getClassLoader());
+        if (in.readByte() == 0x01) {
+            values = new ArrayList<product>();
+            in.readList(values, product.class.getClassLoader());
+        } else {
+            values = null;
+        }
+        holder = (ViewHolder) in.readValue(ViewHolder.class.getClassLoader());
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        //dest.writeValue(context);
+        if (values == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeList(values);
+        }
+        //dest.writeValue(holder);
+    }
+
+    @SuppressWarnings("unused")
+    public static final Parcelable.Creator<ProductAdapter> CREATOR = new Parcelable.Creator<ProductAdapter>() {
+        @Override
+        public ProductAdapter createFromParcel(Parcel in) {
+            return new ProductAdapter(in);
+        }
+
+        @Override
+        public ProductAdapter[] newArray(int size) {
+            return new ProductAdapter[size];
+        }
+    };
 }

@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 public class ClientAdapter extends ArrayAdapter<client> {
     private final Context context;
     private List<client> values;
+    private ViewHolder holder;
 
     ClientAdapter(Context context, List<client> values){
         super(context,0,values);
@@ -25,11 +27,33 @@ public class ClientAdapter extends ArrayAdapter<client> {
     @Override
     public android.view.View getView(int position, View convertView, ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        holder = new ViewHolder();
         if (convertView == null) {
-            convertView = inflater.inflate(R.layout.item_list_view, parent, false);
+            convertView = inflater.inflate(R.layout.item_list_client, parent, false);
+            holder.position=position;
+            holder.name = (TextView) convertView.findViewById(R.id.ClientNameView);
+            holder.city = (TextView) convertView.findViewById(R.id.ClientCityView);
+            holder.pn = (TextView) convertView.findViewById(R.id.ClientPhNoView);;
+            convertView.setTag(holder);
         }
-        TextView text=(TextView) convertView.findViewById(R.id.ItemText);
-        text.setText(values.get(position).toString());
+        else{
+            holder=(ViewHolder)convertView.getTag();
+        }
+        client c =values.get(position);
+        if(c!=null) {
+
+            holder.name.setText(c.getName());
+            holder.city.setText("City : "+c.getCity());
+            holder.pn.setText("Phone NO : "+c.getPhone());
+
+        }
         return convertView;
+
+    }
+    static class ViewHolder {
+        TextView name;
+        TextView city;
+        TextView pn;
+        int position;
     }
 }
