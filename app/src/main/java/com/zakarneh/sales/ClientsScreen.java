@@ -8,6 +8,7 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -118,7 +119,6 @@ public class ClientsScreen extends AppCompatActivity {
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         mSearchAction = menu.findItem(R.id.action_search_client);
-        mAddAction=menu.findItem(R.id.action_add_client);
         return super.onPrepareOptionsMenu(menu);
     }
     @Override
@@ -273,6 +273,7 @@ public class ClientsScreen extends AppCompatActivity {
     }
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        menu.add(Menu.NONE, 2, Menu.NONE, "Call Phone");
         menu.add(Menu.NONE, 0, 0, "Edit");
         menu.add(Menu.NONE, 1, Menu.NONE, "Delete");
     }
@@ -288,6 +289,12 @@ public class ClientsScreen extends AppCompatActivity {
         }
         else if(id==0){//Edit
             edit(c,info.position);
+            return true;
+        }
+        else if(id==2){
+            Intent i= new Intent(Intent.ACTION_CALL);
+            i.setData(Uri.parse("tel:"+c.getPhone()));
+            startActivity(i);
             return true;
         }
         return false;
